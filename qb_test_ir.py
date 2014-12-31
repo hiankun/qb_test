@@ -34,7 +34,8 @@ if __name__ == '__main__':
     for _ in range(600):
         values = tuple(ADC.read_raw(pin) for pin in config.IR_PINS)
         time.sleep(0.5)
-	distances = map(lambda x: 2076.0/(x-11.0) if (x != 11.0) else nan, values)
+        # if the value is not available, assign -999
+	distances = map(lambda x: 2076.0/(x-11.0) if (x != 11.0) else -999., values)
 	print '{:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(*distances)
 
     print "Done"
