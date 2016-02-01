@@ -1,5 +1,6 @@
 import contextlib
 import time
+import numpy as np
 
 import Adafruit_BBIO.GPIO as GPIO
 import Adafruit_BBIO.PWM as PWM
@@ -18,15 +19,16 @@ def setup_motor():
     PWM.start(right_pwm, 0)
 
 def run_motor(left_speed, right_speed):
-    if left_speed > 100:
-        left_speed = 100
-    elif left_speed < -100:
-        left_speed = -100
+    limit = 80
+    if left_speed > limit:
+        left_speed = limit
+    elif left_speed < -limit:
+        left_speed = -limit
 
-    if right_speed > 100:
-        right_speed = 100
-    elif right_speed < -100:
-        right_speed = -100
+    if right_speed > limit:
+        right_speed = limit
+    elif right_speed < -limit:
+        right_speed = -limit
 
     if left_speed > 0:
         GPIO.output(left_motor1, GPIO.LOW)
@@ -79,18 +81,53 @@ def simple_motor_test():
 
 def get_ir_distance(ir_pins):
     values = tuple(ADC.read_raw(pin) for pin in ir_pins)
-    # if the value is not available, assign -999
-    distances = map(lambda x: 2076.0/(x-11.0) if (x != 11.0) else -999., values)
-    #print '{:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(*distances)
-    return distances
 
-def do_control(obstacles):
+    """ NOTE: the distance should be calibrated,
+        the following equations are just a workaround.
+    """
+    # if the value is not available, assign -999
+    #distances = map(lambda x: 2076.0/(x-11.0) if (x != 11.0) else -999., values)
+    distances = map(lambda x: 2076.0/(x) if (x != 0.0) else 999., values)
+    #print '{:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(*distances)
+    return np.array(distances)
+
+def get_direction():
+    #w=np.array([0.0, 0.7 ,1.0 ,0.7, 0.0]) #weightings
+
+    # IR sensors
+    theta = np.array([90.0, 45.0, 0.0, -45.0, -90.0]) * np.pi/180.0 
+    ir_sensor_vector = np.array([[np.sin(x), np.cos(x)] for x in theta]) 
+    dist = get_ir_distance(config.IR_PINS)
+
+    bearing = np.dot(dist, ir_sensor_vector)
+    return bearing 
+
+
+def do_control():
+    """ NOTE: the controller is a simple one for test only.
+        It should be replaced in the future.
+    """
+
+    bearing = get_direction()
+
+    forward_speed = bearing[1] * 0.08
+    lateral_speed = bearing[0] * 0.06
+
+    left_wheel = forward_speed - lateral_speed
+    right_wheel = forward_speed + lateral_speed
+
+    print left_wheel, right_wheel
+    run_motor(left_wheel, right_wheel)
+
+    """
     if (obstacles[1] < 5.0):
         run_motor(50,-50)
     elif (obstacles[3] < 5.0):
         run_motor(-50,50)
     else:
         run_motor(50,50)
+    """
+
 
 if __name__ == '__main__':
     import config
@@ -101,10 +138,9 @@ if __name__ == '__main__':
     setup_motor()
 
     ADC.setup()
-    for _ in range(100):
-        distances = get_ir_distance(config.IR_PINS)
-        time.sleep(0.1)
-        do_control(distances)
+    for _ in range(500):
+        time.sleep(0.2)
+        do_control()
 
     run_motor(0,0)
     time.sleep(1)
