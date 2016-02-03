@@ -82,12 +82,11 @@ def simple_motor_test():
 def get_ir_distance(ir_pins):
     values = tuple(ADC.read_raw(pin) for pin in ir_pins)
 
-    """ NOTE: the distance should be calibrated,
-        the following equations are just a workaround.
+    """ NOTE: the distance formula has been copied from the following page:
+        http://www.dfrobot.com/wiki/index.php/SHARP_GP2Y0A41SK0F_IR_ranger_sensor_%284-30cm%29_SKU:SEN0143
     """
-    # if the value is not available, assign -999
-    #distances = map(lambda x: 2076.0/(x-11.0) if (x != 11.0) else -999., values)
-    distances = map(lambda x: 2076.0/(x) if (x != 0.0) else 999., values)
+    # if the value is not available, assign 999
+    distances = map(lambda x: 2076.0/(x-11.0) if (x > 16) else 999., values)
     #print '{:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(*distances)
     return np.array(distances)
 
@@ -120,9 +119,9 @@ def do_control():
     run_motor(left_wheel, right_wheel)
 
     """
-    if (obstacles[1] < 5.0):
+    if obstacles[1] < 5.0 :
         run_motor(50,-50)
-    elif (obstacles[3] < 5.0):
+    elif obstacles[3] < 5.0 :
         run_motor(-50,50)
     else:
         run_motor(50,50)
@@ -138,7 +137,7 @@ if __name__ == '__main__':
     setup_motor()
 
     ADC.setup()
-    for _ in range(500):
+    for _ in range(100):
         time.sleep(0.2)
         do_control()
 
