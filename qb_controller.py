@@ -87,14 +87,17 @@ def get_ir_distance(ir_pins):
     """
     # if the value is not available, assign 999
     distances = map(lambda x: 2076.0/(x-11.0) if (x > 16) else 999., values)
-    #print '{:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(*distances)
-    return np.array(distances)
+
+    # limit the distance in the range of 30.0 cm
+    dist = map(lambda x: 30.0 if (x > 30.0) else x, distances)
+    #print '{:10.2f}{:10.2f}{:10.2f}{:10.2f}{:10.2f}'.format(*dist)
+    return dist
 
 def get_direction():
     #w=np.array([0.0, 0.7 ,1.0 ,0.7, 0.0]) #weightings
 
     # IR sensors
-    theta = np.array([90.0, 45.0, 0.0, -45.0, -90.0]) * np.pi/180.0 
+    theta = np.array([90.0, 30.0, 0.0, -30.0, -90.0]) * np.pi/180.0 
     ir_sensor_vector = np.array([[np.sin(x), np.cos(x)] for x in theta]) 
     dist = get_ir_distance(config.IR_PINS)
 
@@ -109,8 +112,9 @@ def do_control():
 
     bearing = get_direction()
 
-    forward_speed = bearing[1] * 0.08
-    lateral_speed = bearing[0] * 0.06
+    forward_speed = bearing[1] * 0.6
+    lateral_speed = bearing[0] * 0.6
+    #print forward_speed, lateral_speed
 
     left_wheel = forward_speed - lateral_speed
     right_wheel = forward_speed + lateral_speed
@@ -137,7 +141,7 @@ if __name__ == '__main__':
     setup_motor()
 
     ADC.setup()
-    for _ in range(100):
+    for _ in range(500):
         time.sleep(0.2)
         do_control()
 
